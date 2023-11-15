@@ -1,0 +1,7 @@
+---
+title: "plant-modeling"
+format: html
+editor: visual
+---
+
+stats week-6-lab could be helpful to look at
