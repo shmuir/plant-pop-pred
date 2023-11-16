@@ -29,6 +29,7 @@ la_summary <- la %>%
   group_by(scientific_name) %>%
   summarise(avg_area = mean(trait_value, na.rm = TRUE))
 
+
 redlist <- read_csv("data/redlist_species_data/assessments.csv") %>%
   clean_names() %>%
   filter(population_trend %in% c("Stable", "Increasing", "Decreasing")) %>%
