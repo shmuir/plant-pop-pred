@@ -19,12 +19,12 @@ ggplot(join, aes(x = avg_photo)) +
 
 
 ```{r}
-ggplot(data = join, aes(x = avg_photo, y = pop_trend)) + 
+ggplot(data = la_red, aes(x = avg_area, y = pop_trend)) + 
   geom_jitter(width = 0, height = 0.05, alpha = 0.8) 
 ```
 
 ```{r}
-ggplot(data = join, aes(x = avg_photo, y = pop_trend_binary)) + 
+ggplot(data = la_red, aes(x = avg_area, y = pop_trend_binary)) + 
   geom_jitter(width = 0, height = 0.05, alpha = 0.8) +
   geom_smooth(method = "lm", se = FALSE) +
   labs(x = "photosynthetic rate", y = "decreasing or stable pop. trend")
@@ -32,7 +32,7 @@ ggplot(data = join, aes(x = avg_photo, y = pop_trend_binary)) +
 
 
 ```{r}
-mod_photo <- glm(pop_trend_binary~avg_photo, data = join, family = 'binomial') # binomial dist; prob of 1 and 0 over many trials
+mod_photo <- glm(pop_trend_binary~avg_area, data = la_red, family = 'binomial') # binomial dist; prob of 1 and 0 over many trials
 summary(mod_photo)
 ```
 

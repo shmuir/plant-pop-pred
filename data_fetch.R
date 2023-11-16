@@ -15,10 +15,19 @@ lpr <- BIEN_trait_trait("leaf photosynthetic rate per leaf area") %>%
   mutate(trait_value = as.numeric(trait_value)) %>%
   filter(trait_value < 70)
 
+
+la <- BIEN_trait_trait("leaf nitrogen content per leaf dry mass") %>%
+  rename(scientific_name = scrubbed_species_binomial)  %>%
+  mutate(trait_value = as.numeric(trait_value))
+
+
 lpr_summary <- lpr %>%
   group_by(scientific_name) %>%
   summarise(avg_photo = mean(trait_value, na.rm = TRUE))
 
+la_summary <- la %>%
+  group_by(scientific_name) %>%
+  summarise(avg_area = mean(trait_value, na.rm = TRUE))
 
 redlist <- read_csv("data/redlist_species_data/assessments.csv") %>%
   clean_names() %>%
@@ -33,6 +42,7 @@ redlist <- read_csv("data/redlist_species_data/assessments.csv") %>%
 
 join <- inner_join(lpr_summary, redlist, by = "scientific_name")
 
+la_red <- inner_join(la_summary, redlist, by = "scientific_name")
 
 #summary(glm(population_trend ~ trait_value, join))
 
