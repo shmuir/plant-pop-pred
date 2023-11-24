@@ -37,5 +37,5 @@ redlist <- read_csv("data/redlist_species_data/assessments.csv") %>%
 
 #setdiff(lpr$scrubbed_species_binomial, redlist$scientific_name)
 
-join <- inner_join(lpr_summary, redlist, by = "scientific_name")
+join <- inner_join(lpr_summary, redlist)
 

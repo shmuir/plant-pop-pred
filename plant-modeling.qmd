@@ -70,6 +70,9 @@ ggplot(join, aes(x = avg_photo, y = pop_trend_binary)) +
 mod_photo <- glm(pop_trend_binary ~ avg_photo, 
                   data = join, 
                   family = "binomial")
+
+summary(mod_photo)
+
 # Model output table format
 sjPlot::tab_model(mod_photo,
           transform = NULL,
@@ -103,36 +106,94 @@ ggplot(photo_plus, aes(x = avg_photo, y = odds_hat)) +
   theme_linedraw()
 ```
 
-## 
+## Omitted Variables
+
+```{r}
+climate_threatened <- read_csv("data/IUCN_climate_threatened.csv") %>%
+  mutate(climate_threatened = "yes")
+human_threatened <- read_csv("data/IUCN_human_disturb.csv") %>%
+  mutate(human_threatened = "yes")
+
+join_c <- join %>%
+  mutate(climate_threatened = NA,
+         human_threatened = NA)
+
+climate_join <- left_join(join, climate_threatened) %>%
+    mutate(climate_threatened = replace(climate_threatened, is.na(climate_threatened), "no"))
+
+clim_human <- left_join(climate_join, human_threatened) %>%
+      mutate(human_threatened = replace(human_threatened, is.na(human_threatened), "no"))
+
+```
+
+```{r}
+mod <- glm(pop_trend_binary ~ avg_photo + climate_threatened + human_threatened,
+           data = clim_human,
+           family = "binomial")
+summary(mod)
+```
+
+
+```{r}
+tab_model(mod,
+          transform = NULL,
+          pred.labels = c("Intercept", "Average Photosyntheitc Rate ()", 
+                          "Climate Threatened", "Human Threatened"),
+          dv.labels = c("log Threat Pobability"),
+          p.style = c("numeric_stars"),
+          p.threshold = c(0.10, 0.05, 0.01),
+          show.p = TRUE,
+          string.p = "P-value",
+          show.r2 = FALSE,
+          title = "Logisitc Regression Model Results for Photosynthetic Rate, Climate Threatened, and Human Threatened",
+          digits = 3)
+```
+
+## Making Predictions
+
+```{r}
+# Gather coefficients
+b0 <- mod$coefficients[1] #Intercept
+b1 <- mod$coefficients[2] #photo
+b2 <- mod$coefficients[3] #climate
+b3 <- mod$coefficients[4] #human
+
+# Function for testing probabilities
+threat_prob <- function(b0, b1, b2, b3, photo, climate, human) {
+  equ <- b0 + b1 * photo + b2 * climate + b3 * human
+  prob <- (exp(equ)) / (1 + exp(equ))
+  print(prob)
+}
+
+# Testing probabilities for species with the highest and lowest photosynthetic rates
+threat_prob(b0, b1, b2, b3, 47.06767, 0, 0) # for highest photosynthetic rate in data
+threat_prob(b0, b1, b2, b3, 0.34, 1, 1) # for lowest photosynthetic rate in data
+```
+
+
+```{r}
+# Predictions for plants not listed on IUCN redlist
+
+lpr_pred <- anti_join(lpr_summary, redlist) %>%
+  arrange(desc(avg_photo)) %>%
+  tail(5)
+
+pred_cols <- data.frame(climate_threatened = c(0,0,1,1,0),
+                        human_threatened = c(0,0,0,0,1)) 
+
+lpr_pred <- cbind(lpr_pred, pred_cols)
+
+for (i in seq_along(lpr_pred$scientific_name)) {
+  lpr_pred$y_hat[i] <- threat_prob(b0, b1, b2, b3, 
+                                       lpr_pred$avg_photo[i],
+                                       lpr_pred$climate_threatened[i],
+                                       lpr_pred$human_threatened[i])
+}
+
+lpr_pred %>% 
+  arrange(desc(y_hat)) %>%
+  head()
+```
+
 
 # Thoughts and Conclusions
-
-```{r}
-ggplot(data = join, aes(x = avg_photo, y = pop_trend_binary)) + 
-  geom_jitter(width = 0, height = 0.05, alpha = 0.8) +
-  geom_smooth(method = "lm", se = FALSE) +
-  labs(x = "Avg. Photosynthetic Rate per Leaf Area (Âµmol.m-2.s-1)", 
-       y = "Decreasing or Stable/Increasing Populaiton Trend") +
-  theme_linedraw()
-```
-
-```{r}
-mod_photo <- glm(pop_trend_binary~avg_photo, data = join, family = 'binomial') # binomial dist; prob of 1 and 0 over many trials
-summary(mod_photo)
-```
-
-
-```{r}
-toSolve <- function(p) {
-  (1-p)*exp(1.56-0.05847*64) - p
-  }
-
-uniroot(toSolve, interval = c(0, 1))$root
-```
-
-
-
-```{r}
-
-```
-
