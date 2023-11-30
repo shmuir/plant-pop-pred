@@ -20,7 +20,18 @@ library(sjPlot)
 library(generics)
 ```
 
+**General Notes**
+- checkout `dotwhisker` package
+- cite sources
+- 1-3 tables or figures with captions in plain-ish language
+
 # Project Overview
+
+## Motivation
+- background and context + why people should care
+- state hypothesis
+- write out equation (not sure what the best place for this is)
+- show figures ect that support hypothesis
 
 # Data
 
@@ -30,17 +41,16 @@ source(file.path("data_fetch.R"))
 
 ## Data Preperation
 
-Data was prepared in the `data_fetch.R` script. 
+Data was prepared in the `data_fetch.R` script.
 
 ## Data Exploration
 
 ```{r}
 ggplot(join, aes(x = avg_photo)) +
-  geom_histogram() +
+  geom_histogram(color = "lightgreen") +
   theme_linedraw() +
   labs(x = "Avg. Photosynthetic Rate per Leaf Area (Âµmol.m-2.s-1)")
 ```
-
 
 ```{r}
 ggplot(data = join, aes(x = avg_photo, y = pop_trend)) + 
@@ -49,7 +59,6 @@ ggplot(data = join, aes(x = avg_photo, y = pop_trend)) +
   labs(x = "Avg. Photosynthetic Rate per Leaf Area (Âµmol.m-2.s-1)", 
        y = "Population Trend")
 ```
-
 
 # Logistic Regression
 
@@ -63,7 +72,6 @@ ggplot(join, aes(x = avg_photo, y = pop_trend_binary)) +
               method.args = list(family = "binomial")) +
   theme_linedraw()
 ```
-
 
 ```{r}
 # Log regression length
@@ -133,7 +141,6 @@ mod <- glm(pop_trend_binary ~ avg_photo + climate_threatened + human_threatened,
 summary(mod)
 ```
 
-
 ```{r}
 tab_model(mod,
           transform = NULL,
@@ -170,7 +177,6 @@ threat_prob(b0, b1, b2, b3, 47.06767, 0, 0) # for highest photosynthetic rate in
 threat_prob(b0, b1, b2, b3, 0.34, 1, 1) # for lowest photosynthetic rate in data
 ```
 
-
 ```{r}
 # Predictions for plants not listed on IUCN redlist
 
@@ -195,5 +201,8 @@ lpr_pred %>%
   head()
 ```
 
+# Thoughts and Conclusions'
 
-# Thoughts and Conclusions
+- do these results support your hypothesis, why or why not
+- discuss uncertainty (std error)
+- discuss limitations
