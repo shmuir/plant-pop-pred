@@ -39,3 +39,19 @@ redlist <- read_csv("data/redlist_species_data/assessments.csv") %>%
 
 join <- inner_join(lpr_summary, redlist)
 
+climate_threatened <- read_csv("data/IUCN_climate_threatened.csv") %>%
+  mutate(climate_threatened = "yes")
+
+human_threatened <- read_csv("data/IUCN_human_disturb.csv") %>%
+  mutate(human_threatened = "yes")
+
+join_c <- join %>%
+  mutate(climate_threatened = NA,
+         human_threatened = NA)
+
+climate_join <- left_join(join, climate_threatened) %>%
+  mutate(climate_threatened = replace(climate_threatened, is.na(climate_threatened), "no"))
+
+clim_human <- left_join(climate_join, human_threatened) %>%
+  mutate(human_threatened = replace(human_threatened, is.na(human_threatened), "no"))
+
