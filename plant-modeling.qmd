@@ -1,5 +1,7 @@
 ---
-title: "plant-modeling"
+title: "Predicting plant population trends from photosynthetic rate and threats"
+author: "Sam Muir"
+date: 12-10-2023
 format: html
 editor: visual
 output:
@@ -14,15 +16,13 @@ output:
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
-```{r packages}
+```{r packages, include=FALSE}
 library(tidyverse)
 library(sjPlot)
 library(generics)
 library(patchwork)
 library(kableExtra)
 ```
-
-**General Notes** - checkout `dotwhisker` package - cite sources - 1-3 tables or figures with captions in plain-ish language
 
 # Project Overview
 
@@ -34,8 +34,6 @@ C4 and CAM plants have a more efficient carbon fixation process and are generall
 
 There are many other factors that affect a species' population trend, but in this project, I am interested in analyzing plant physiological and ecological traits to try to predict a plant's population trend based on the IUCN Red List.
 
-##### $$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate) + \beta_2  (Climate) + \beta_3  (Human) +\varepsilon $$
-
 # Data & Methods
 
 Photosynthetic rate data was obtained from the `BIEN` R package. The Botanical Information and Ecology Network (BIEN) was developed by collaborating ecologists at the National Center for Ecological Analysis and Synthesis (NCEAS). The BIEN database contains a variety of information ranging from phylogeny data to species distribution. To determine population trend and if a species is threatened by climate change or human activity I obtained data from the IUCN Red List.
@@ -44,7 +42,7 @@ To analyze my data I ran a logistic regression. I used Increasing/Stable (0) and
 
 ## Data Preparation
 
-Data was prepared in the `data_fetch.R` script.
+Data was prepared in the `data_fetch.R` script. Data from `BIEN` was cleaned and joined with data from the IUCN Red List entries for species in the kingdom *Plantae*. Species that had an increasing or stable population trend were assigned a binary variable of 0 and those who had a decreasing population trend were assigned a binary variable of 1. 
 
 ```{r}
 source(file.path("data_fetch.R"))
@@ -94,11 +92,12 @@ ggplot(join, aes(x = avg_photo, y = pop_trend_binary)) +
               method.args = list(family = "binomial")) +
   theme_linedraw() +
   labs(x = "Avg. Photosynthetic Rate per Leaf Area (Âµmol m-2 s-1)", 
-       y = "Binary Population Trend")
+       y = "Binary Population Trend",
+       title = "Generalized Linear Model")
 ```
 
 ```{r}
-# regression
+# model
 mod_photo <- glm(pop_trend_binary ~ avg_photo, 
                   data = join, 
                   family = "binomial")
@@ -107,11 +106,11 @@ mod_photo <- glm(pop_trend_binary ~ avg_photo,
 sjPlot::tab_model(mod_photo,
           transform = NULL,
           pred.labels = c("Intercept", "Avg. Photosynthetic Rate (Âµmol m-2 s-1)"),
-          dv.labels = c("log Trend Pobability"),
           show.p = TRUE,
           p.style = c("numeric_stars"),
           p.threshold = c(0.10, 0.05, 0.01),
-          string.p = "P-value",
+          dv.labels = c("log Threat Pobability"),
+          string.p = "p-value",
           show.r2 = FALSE,
           title = "Logisitc Regression Model Results for Photosynthetic Rate",
           digits = 3)
@@ -130,15 +129,15 @@ photo_fitted <- photo_fitted %>%
 ggplot(photo_fitted, aes(x = avg_photo, y = odds_hat)) +
   geom_point(size = 1) + 
   geom_line() + 
-  scale_y_continuous("Odds of being threatened") +
+  scale_y_continuous("Log-odds of being threatened") +
   labs(x = "Avg. Photosynthetic Rate (Âµmol m-2 s-1)", 
-       title = "Odds of being threatened by species photosynthetic rate") +
+       title = "Log-odds of being threatened by photosynthetic rate") +
   theme_linedraw()
 ```
 
 ## Omitted Variables
 
-This first model only considered photosynthetic rate, but now we want to add in climate and human threats. 
+This first model only considered photosynthetic rate, but now we want to add in if the species is threatened by climate change or human activity 
 
 ```{r}
 mod <- glm(pop_trend_binary ~ avg_photo + climate_threatened + human_threatened,
@@ -149,19 +148,21 @@ tab_model(mod,
           transform = NULL,
           pred.labels = c("Intercept", "Average Photosyntheitc Rate (Âµmol m-2 s-1)", 
                           "Climate Threatened", "Human Threatened"),
-          dv.labels = c("log Threat Pobability"),
           p.style = c("numeric_stars"),
           p.threshold = c(0.10, 0.05, 0.01),
           show.p = TRUE,
-          string.p = "P-value",
+          string.p = "p-value",
+          dv.labels = c("log Threat Pobability"),
           show.r2 = FALSE,
           title = "Logisitc Regression Model Results for Photosynthetic Rate, Climate Threatened, and Human Threatened",
           digits = 3)
 ```
 
-From this model we can see that average photosynthetic rate (p<0.001) and if a species is threatened by climate factors (<0.001) are significant predictors, but human threatened is not (p=0.706). Based on this model, I conclude that for each unit increase in photosynthetic rate, the log-odds of a species being threatened decreases by `r mod$coefficients[2]`.
+From this model we can see that at 95% confidence, average photosynthetic rate (p<0.001) and if a species is threatened by climate factors (p<0.001) are significant predictors of population trend, but human threatened is not (p=0.706). Based on this model, I conclude that for each unit increase in photosynthetic rate, the log-odds of a species being threatened decreases by `r mod$coefficients[2]`.
 
 ## Making Predictions
+
+There are many species from the BIEN data that are not present on the IUCN Red List. Here, I am using my model to try to predict if an unlisted species population trend. To do this, I'll need to pull of the model coefficients and create a function with inputs for the coefficients, photosynthetic rate, if it is threatened by climate change, and if it is threatened by human activities. 
 
 ```{r}
 # coefficients
@@ -183,11 +184,14 @@ threat_prob(b0, b1, b2, b3, 0.34, 1, 1) # for lowest photosynthetic rate in data
 ```
 
 ```{r}
-# Predictions for plants not listed on IUCN redlist
+# Predictions for plants not listed on IUCN red list
+
+# find plants not on red list with the lowest photosynthetic rates
 lpr_pred <- anti_join(lpr_summary, redlist) %>%
   arrange(desc(avg_photo)) %>%
   tail(5)
 
+# binary climate and human values come from literature search
 pred_cols <- data.frame(climate_threatened = c(0,0,1,1,0),
                         human_threatened = c(0,0,0,0,1)) 
 
@@ -202,10 +206,12 @@ for (i in seq_along(lpr_pred$scientific_name)) {
 
 lpr_pred %>% 
   arrange(desc(y_hat)) %>%
-  kable()
+  kbl(linesep = "", booktabs = TRUE, col.names = c("Speices", "Photo Rate", "Climate", "Human", "ˆy")) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"),
+                latex_options = c("striped", "hold_position"), full_width = TRUE)
 ```
 
-# Thoughts and Conclusions'
+# Thoughts and Conclusions
 
 -   do these results support your hypothesis, why or why not
 -   discuss uncertainty (std error)
