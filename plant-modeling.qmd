@@ -81,7 +81,7 @@ clim_plot + human_plot
 
 # Analysis
 
-## Logistic Regression for Average Photosynthetic Rate
+## Logistic Regression
 
 ##### $$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate)  +\varepsilon $$
 
@@ -93,8 +93,7 @@ ggplot(join, aes(x = avg_photo, y = pop_trend_binary)) +
               method.args = list(family = "binomial")) +
   theme_linedraw() +
   labs(x = "Avg. Photosynthetic Rate per Leaf Area (Âµmol m-2 s-1)", 
-       y = "Binary Population Trend",
-       title = "Generalized Linear Model")
+       y = "Has Decreasing Population Trend")
 ```
 
 ```{r}
@@ -117,7 +116,7 @@ sjPlot::tab_model(mod_photo,
           digits = 3)
 ```
 
-**A 1 unit increase in photosynthetic rate indicates a 0.089 decrease in probability of having a decreasing population trend.**
+A 1 unit increase in photosynthetic rate indicates a 0.089 decrease in probability of having a decreasing population trend.
 
 This model tells us:
 
@@ -125,9 +124,21 @@ $$
 \operatorname{logit}(\hat p)=\log \left(\frac{\hat p}{1-\hat p}\right)=-0.464-0.089 x
 $$
 
+### Odds Ratio
+
+By how much does the model predict that the odds of having a decreasing population will change with each additional unit in photosynthetic rate?
+
+$$
+\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot x\right)
+$$
+```{r}
+exp(mod_photo$coefficients[2])
+```
+
+The model estimates that one additional unit in photosynthetic rate is associated with a change in the odds ratio of $e^{-0.089} = 0.915$, or a 8.9% decrease in the odds of having a decreasing population. 
 
 ```{r}
-# compute fitted prob.
+# compute odds hat var
 photo_fitted <- mod_photo %>%
   augment(type.predict = "response") %>%
   mutate(y_hat = .fitted) %>%
@@ -138,28 +149,22 @@ ggplot(photo_fitted, aes(x = avg_photo, y = odds_hat)) +
   geom_point(size = 1) + 
   geom_line() + 
   scale_y_continuous("Log-odds of being threatened") +
-  labs(x = "Avg. Photosynthetic Rate (Âµmol m-2 s-1)", 
-       title = "Log-odds of being threatened by photosynthetic rate") +
+  labs(x = "Avg. Photosynthetic Rate (Âµmol m-2 s-1)") +
   theme_linedraw()
 ```
 
-## Omitted Variables
+## Logistic Model
 
-This first model only considered photosynthetic rate, but now we want to add in if the species is threatened by climate change or human activity 
+This first model only considered photosynthetic rate, but now we want to add in if the species is threatened by climate change or human activity, since both of these historically have contributed to plant species becoming threatened.  
 
 ```{r}
 mod <- glm(pop_trend_binary ~ avg_photo + climate_threatened + human_threatened,
            data = clim_human_res,
            family = "binomial")
-exp(coef(mod)) 
 
-# plants threatened by climate have odds of having decreasing pop. increase by a factor of 4.29, controlling for pr
-# plants threatened by humans have odds of having decreasing pop. increase by a factor of 2.52, controlling for pr
-# pr still has an effect on pop trend. odds of having decreasing pop fall by about 
+exp(coef(mod))
 
-# inc pr by 1 unit lowers odds of survival by 0.89% (holding threatened or not constant)
-# if threatened by climate, odds of decreasing pop increase by 4.2 times
-# if threatened by human, odds of decreasing pop increase by 2.5 times
+mod$coefficients[2]
 
 tab_model(mod,
           transform = NULL,
@@ -175,20 +180,20 @@ tab_model(mod,
           digits = 3)
 ```
 
-From this model we can see that at 95% confidence, average photosynthetic rate (p<0.001) and if a species is threatened by climate factors (p<0.001) are significant predictors of population trend, but human threatened is not (p=0.706). Based on this model, I conclude that for each unit increase in photosynthetic rate, the log-odds of a species being threatened decreases by `r mod$coefficients[2]`.
+From this model we can conclude that plants threatened by climate factors have their odds of having a decreasing population increase by a factor of 4.29, while those threatened by human factors have their odds increase by a factor of 2.52. We can also see that photosynthetic rate does still have an effect on population trend. Based on this model, the odds of having a decreasing population trend fall by about 10% for each unit increase in photosynthetic rate.  
 
-## Making Predictions
+# Making Probalistic Predictions
 
 There are many species from the BIEN data that are not present on the IUCN Red List. Here, I am using my model to make out-of-sample predictions. To do this, I'll need to pull of the model coefficients and create a function with inputs for the coefficients, photosynthetic rate, if it is threatened by climate change, and if it is threatened by human activities. 
-
 ```{r}
-
-p1 <- data.frame(avg_photo = 47.06767, climate_threatened = "no", human_threatened = "no")
-augment(mod, newdata = p1, type.predict = "response")
-
-p2 <- data.frame(avg_photo = 0.34, climate_threatened = "yes", human_threatened = "yes")
-augment(mod, newdata = p2, type.predict = "response")
-
+# p1 <- data.frame(avg_photo = 47.06767, climate_threatened = "no", human_threatened = "no")
+# augment(mod, newdata = p1, type.predict = "response")
+# 
+# p2 <- data.frame(avg_photo = 0.34, climate_threatened = "yes", human_threatened = "yes")
+# 
+# augment(mod, newdata = p2, type.predict = "response")
+# 
+# augment(mod, newdata = p1, type.predict = "response")
 
 # coefficients
 b0 <- mod$coefficients[1] #Intercept
@@ -208,7 +213,7 @@ threat_prob(b0, b1, b2, b3, 47.06767, 0, 0) # for highest photosynthetic rate in
 threat_prob(b0, b1, b2, b3, 0.34, 1, 1) # for lowest photosynthetic rate in data
 ```
 
-```{r}
+```{r results='hide'}
 # Predictions for plants not listed on IUCN red list
 
 # find plants not on red list with the lowest photosynthetic rates
@@ -233,10 +238,12 @@ for (i in seq_along(lpr_pred$scientific_name)) {
                                        lpr_pred$climate_threatened[i],
                                        lpr_pred$human_threatened[i])
 }
+```
 
+```{r}
 lpr_pred %>% 
   arrange(desc(avg_photo)) %>%
-  kbl(linesep = "", booktabs = TRUE, col.names = c("Speices", "Photo Rate", "Climate", "Human", "ˆy")) %>%
+  kbl(linesep = "", booktabs = TRUE, col.names = c("Speices", "Photosynthetic Rate", "Climate", "Human", "ˆy")) %>%
   kable_styling(bootstrap_options = c("striped", "condensed"),
                 latex_options = c("striped", "hold_position"), full_width = TRUE)
 ```
