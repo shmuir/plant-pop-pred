@@ -36,13 +36,13 @@ There are many other factors that affect a species' population trend, but in thi
 
 # Data & Methods
 
-Photosynthetic rate data was obtained from the `BIEN` R package. The Botanical Information and Ecology Network (BIEN) was developed by collaborating ecologists at the National Center for Ecological Analysis and Synthesis (NCEAS). The BIEN database contains a variety of information ranging from phylogeny data to species distribution. To determine population trend and if a species is threatened by climate change or human activity I obtained data from the IUCN Red List. Climate threats include habitat shifts, droughts, temperature extremes, storms & flooding, and other impacts not defined by the IUCN. Human threats include housing & urban areas, commercial & industrial areas, tourism & recreation areas, recreational activities, war & civil unrest, and work & other activities. 
+Photosynthetic rate data was obtained from the `BIEN` R package. The Botanical Information and Ecology Network (BIEN) was developed by collaborating ecologists at the National Center for Ecological Analysis and Synthesis (NCEAS). The BIEN database contains a variety of information ranging from phylogeny data to species distribution. To determine population trend and if a species is threatened by climate change or human activity I obtained data from the IUCN Red List. Climate threats include habitat shifts, droughts, temperature extremes, storms & flooding, and other impacts not defined by the IUCN. Human threats include housing & urban areas, commercial & industrial areas, tourism & recreation areas, recreational activities, war & civil unrest, and work & other activities.
 
-To analyze my data I ran a logistic regression model. I used Increasing/Stable (0) and Decreasing (1) as the categorical binary response variable on average photosynthetic rare per leaf area, climate threatened, and human threatened. 
+To analyze my data I ran a logistic regression model. I used Increasing/Stable (0) and Decreasing (1) as the categorical binary response variable on average photosynthetic rare per leaf area, climate threatened, and human threatened.
 
 ## Data Preparation
 
-Data was prepared in the `data_fetch.R` script. Data from `BIEN` was cleaned and joined with data from the IUCN Red List entries for species in the kingdom *Plantae*. Species that had an increasing or stable population trend were assigned a binary variable of 0 and those who had a decreasing population trend were assigned a binary variable of 1. 
+Data was prepared in the `data_fetch.R` script. Data from `BIEN` was cleaned and joined with data from the IUCN Red List entries for species in the kingdom *Plantae*. Species that had an increasing or stable population trend were assigned a binary variable of 0 and those who had a decreasing population trend were assigned a binary variable of 1.
 
 ```{r}
 source(file.path("data_fetch.R"))
@@ -131,11 +131,12 @@ By how much does the model predict that the odds of having a decreasing populati
 $$
 \operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot x\right)
 $$
+
 ```{r}
 exp(mod_photo$coefficients[2])
 ```
 
-The model estimates that one additional unit in photosynthetic rate is associated with a change in the odds ratio of $e^{-0.089} = 0.915$, or a 8.9% decrease in the odds of having a decreasing population. 
+The model estimates that one additional unit in photosynthetic rate is associated with a change in the odds ratio of $e^{-0.089} = 0.915$, or a 8.9% decrease in the odds of having a decreasing population.
 
 ```{r}
 # compute odds hat var
@@ -155,7 +156,9 @@ ggplot(photo_fitted, aes(x = avg_photo, y = odds_hat)) +
 
 ## Logistic Model
 
-This first model only considered photosynthetic rate, but now we want to add in if the species is threatened by climate change or human activity, since both of these historically have contributed to plant species becoming threatened.  
+This first model only considered photosynthetic rate, but now we want to add in if the species is threatened by climate change or human activity, since both of these historically have contributed to plant species becoming threatened.
+
+$$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate) + \beta_2  (Climate) + \beta_3  (Human) +\varepsilon $$
 
 ```{r}
 mod <- glm(pop_trend_binary ~ avg_photo + climate_threatened + human_threatened,
@@ -180,11 +183,12 @@ tab_model(mod,
           digits = 3)
 ```
 
-From this model we can conclude that plants threatened by climate factors have their odds of having a decreasing population increase by a factor of 4.29, while those threatened by human factors have their odds increase by a factor of 2.52. We can also see that photosynthetic rate does still have an effect on population trend. Based on this model, the odds of having a decreasing population trend fall by about 10% for each unit increase in photosynthetic rate.  
+From this model we can conclude that plants threatened by climate factors have their odds of having a decreasing population increase by a factor of 4.29, while those threatened by human factors have their odds increase by a factor of 2.52. We can also see that photosynthetic rate does still have an effect on population trend. Based on this model, the odds of having a decreasing population trend fall by about 10% for each unit increase in photosynthetic rate.
 
 # Making Probalistic Predictions
 
-There are many species from the BIEN data that are not present on the IUCN Red List. Here, I am using my model to make out-of-sample predictions. To do this, I'll need to pull of the model coefficients and create a function with inputs for the coefficients, photosynthetic rate, if it is threatened by climate change, and if it is threatened by human activities. 
+There are many species from the BIEN data that are not present on the IUCN Red List. Here, I am using my model to make out-of-sample predictions. To do this, I'll need to pull of the model coefficients and create a function with inputs for the coefficients, photosynthetic rate, if it is threatened by climate change, and if it is threatened by human activities.
+
 ```{r}
 # p1 <- data.frame(avg_photo = 47.06767, climate_threatened = "no", human_threatened = "no")
 # augment(mod, newdata = p1, type.predict = "response")

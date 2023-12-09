@@ -1,0 +1,313 @@
+---
+title: "Predicting plant population trend from photosynthetic rate"
+subtitle: "EDS222"
+author: "Sam Muir"
+date: "December 12, 2023"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      countIncrementalSlides: false
+    css: ['default', 'metropolis', 'metropolis-fonts', 'my-css.css']
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(BIEN)
+library(rredlist)
+library(janitor)
+library(here)
+library(sjPlot)
+library(generics)
+library(patchwork)
+library(kableExtra)
+
+## leaf photosynthetic rate per leaf area data ##
+lpr <- BIEN_trait_trait("leaf photosynthetic rate per leaf area") %>%
+  rename(scientific_name = scrubbed_species_binomial)  %>%
+  mutate(trait_value = as.numeric(trait_value)) %>%
+  filter(trait_value < 70)
+# there's a few values there in the 200,000+ which don't make sense physiologically...
+#they're also all from the same study, so there may be some incorrect calculations in the data.
+#These values were removed for simplicity
+
+## find avg photosynthetic rate for each species ##
+lpr_summary <- lpr %>%
+  group_by(scientific_name) %>%
+  summarise(avg_photo = mean(trait_value, na.rm = TRUE))
+
+## read in redlist data ##
+redlist <- read_csv(here("data", "redlist_species_data/assessments.csv")) %>%
+  clean_names() %>%
+  filter(population_trend %in% c("Stable", "Increasing", "Decreasing")) %>% # remove data deficient observations
+  # create new pop trend groupings
+  mutate(pop_trend = case_when(population_trend == "Decreasing" ~ "Decreasing",
+                               population_trend %in% c("Stable", "Increasing") ~ "Stable_Inc"),
+         # binary values for pop trend
+         pop_trend_binary = case_when(pop_trend == "Decreasing" ~ 1,
+                                      pop_trend == "Stable_Inc" ~ 0))
+
+
+#setdiff(lpr$scrubbed_species_binomial, redlist$scientific_name)
+
+## join lpr with the redlist data, keeping species present in both dfs ##
+join <- inner_join(lpr_summary, redlist)
+
+## threat data ##
+# climate threatened speices
+climate_threatened <- read_csv(here("data", "IUCN_climate_threatened.csv")) %>%
+  mutate(climate_threatened = "yes")
+
+# human threatened species
+# this includes both "human intrusions & disturbance" and "residential & commercial development" catagories from IUCN
+human_res <- read_csv(here("data","IUCN_human_res.csv")) %>%
+  mutate(human_threatened = "yes")
+
+## threat joins ##
+# those not climate threatened will be catagorized as "no" under the climate_threatened col
+climate_join <- left_join(join, climate_threatened) %>%
+  mutate(climate_threatened = replace(climate_threatened, is.na(climate_threatened), "no"))
+
+# those not human threatened will be catagorized as "no" under the climate_threatened col
+clim_human_res <- left_join(climate_join, human_res) %>%
+  mutate(human_threatened = replace(human_threatened, is.na(human_threatened), "no"))
+```
+
+# Background
+
+### Plants are threatened by many factors**
+
+- Climate change
+- Habit loss
+- Human disturbance
+- Natural Disasters
+
+--
+### Factors that make certain species more resiliant
+- Traits (high range tolerance)
+- Associations with symbiotic fungi
+- Enhanced/ efficient metabolic processes
+
+--
+### Endangered and Threatened Species
+
+- number of plants listed as endangered
+- number with decreasing population as listed by IUCN
+
+
+---
+# Question:
+
+## Can we predict is a plant species will have a decreasing based on its photosynthetic rate and if it is threatened by climate change or human activity?
+
+---
+
+# Analysis Plan
+
+- Logistic Regression
+
+##### $$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate) + \beta_2  (Climate) + \beta_3  (Human) +\varepsilon $$
+
+- Odds Ratio
+
+##### $$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot x\right)$$
+
+- Make Predictions ?
+
+```{r}
+threat_prob <- function(b0, b1, b2, b3, photo, climate, human) {
+  equation <- b0 + b1 * photo + b2 * climate + b3 * human
+  prob <- (exp(equation)) / (1 + exp(equation))
+  print(prob)
+}
+```
+
+---
+# Data
+
+### Photosynthetic Rate
+- `BIEN` package in R
+  - Botanical Information and Ecology Network (BIEN) was developed by collaborating ecologists at the National Center for Ecological Analysis and Synthesis (NCEAS)
+- Population Trend and Threats
+  - IUCN Red List
+  
+---
+# First looks
+
+```{r echo=FALSE, fig.height=6}
+ggplot(data = join, aes(x = avg_photo, y = pop_trend)) + 
+  geom_jitter(width = 0, height = 0.05, alpha = 0.8) +
+  theme_linedraw() +
+  labs(x = "Avg. Photosynthetic Rate per Leaf Area (Âµmol m-2 s-1)", 
+       y = "Population Trend")
+```
+
+---
+# Logistic Regression
+```{r echo=FALSE, fig.height=6}
+# binary resp glm plot
+ggplot(join, aes(x = avg_photo, y = pop_trend_binary)) + 
+  geom_jitter(width = 0, height = 0.05, alpha = 0.8) +
+  geom_smooth(method = "glm", se = FALSE, color = "red", 
+              method.args = list(family = "binomial")) +
+  theme_linedraw() +
+  labs(x = "Avg. Photosynthetic Rate per Leaf Area (Âµmol m-2 s-1)", 
+       y = "Has Decreasing Population Trend")
+```
+---
+# Logistic Regression
+```{r echo=FALSE}
+# model
+mod_photo <- glm(pop_trend_binary ~ avg_photo, 
+                  data = join, 
+                  family = "binomial") # binomial dist; prob of 1 and 0 over many trials
+
+# model table
+sjPlot::tab_model(mod_photo,
+          transform = NULL,
+          pred.labels = c("Intercept", "Avg. Photosynthetic Rate (Âµmol m-2 s-1)"), # predictor labels
+          show.p = TRUE, # include p-val
+          p.style = c("numeric_stars"),
+          p.threshold = c(0.10, 0.05, 0.01),
+          dv.labels = c("log Probability of Decreasing Population"),
+          string.p = "p-value",
+          show.r2 = FALSE,
+          title = "Logisitc Regression Model Results for Photosynthetic Rate",
+          digits = 3)
+```
+
+$$\operatorname{logit}(\hat p)=\log \left(\frac{\hat p}{1-\hat p}\right)=-0.464-0.089 x$$
+
+---
+# Odds Ratio
+
+By how much does the model predict that the odds of having a decreasing population will change with each additional unit in photosynthetic rate?
+--
+$$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot x\right)$$
+--
+```{r}
+exp(mod_photo$coefficients[2])
+```
+--
+The model estimates that one additional unit in photosynthetic rate is associated with a change in the odds ratio of $e^{-0.089} = 0.915$, or a 8.9% decrease in the odds of having a decreasing population.
+
+---
+# Odds Ratio
+```{r echo=FALSE}
+# compute odds hat var
+photo_fitted <- mod_photo %>%
+  augment(type.predict = "response") %>%
+  mutate(y_hat = .fitted) %>%
+  mutate(odds_hat = y_hat / (1 - y_hat)) # y_hat is p
+
+# plot
+ggplot(photo_fitted, aes(x = avg_photo, y = odds_hat)) +
+  geom_point(size = 1) + 
+  geom_line() + 
+  scale_y_continuous("Log-odds of being threatened") +
+  labs(x = "Avg. Photosynthetic Rate (Âµmol m-2 s-1)") +
+  theme_linedraw()
+```
+---
+# Logistic Model
+
+<small>$$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate) + \beta_2  (Climate) + \beta_3  (Human) +\varepsilon$$<small>
+
+--
+
+```{r}
+mod <- glm(pop_trend_binary ~ avg_photo + climate_threatened + human_threatened,
+           data = clim_human_res,
+           family = "binomial")
+
+exp(coef(mod))
+
+mod$coefficients[2]
+```
+
+---
+# Logistic Model
+
+```{r echo=FALSE}
+tab_model(mod,
+          transform = NULL,
+          pred.labels = c("Intercept", "Average Photosyntheitc Rate (Âµmol m-2 s-1)", 
+                          "Climate Threatened", "Human Threatened"),
+          p.style = c("numeric_stars"),
+          p.threshold = c(0.10, 0.05, 0.01),
+          show.p = TRUE,
+          string.p = "p-value",
+          dv.labels = c("log Threat Pobability"),
+          show.r2 = FALSE,
+          title = "Logisitc Regression Model Results for Photosynthetic Rate, Climate Threatened, and Human Threatened",
+          digits = 3)
+```
+
+--
+Based on this model:
+
+- Plants threatened by climate factors have their odds of having a decreasing population increase by a factor of 4.29
+- Plants threatened by human factors have their odds increase by a factor of 2.52
+- The odds of having a decreasing population trend fall by about 10% for each unit increase in photosynthetic rate.
+
+---
+# Making Probalistic Predictions
+
+```{r}
+threat_prob <- function(b0, b1, b2, b3, photo, climate, human) {
+  equation <- b0 + b1 * photo + b2 * climate + b3 * human
+  prob <- (exp(equation)) / (1 + exp(equation))
+  print(prob)}
+```
+
+```{r echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+# coefficients
+b0 <- mod$coefficients[1] #Intercept
+b1 <- mod$coefficients[2] #photo
+b2 <- mod$coefficients[3] #climate
+b3 <- mod$coefficients[4] #human
+
+# Function for testing probabilities
+threat_prob <- function(b0, b1, b2, b3, photo, climate, human) {
+  equation <- b0 + b1 * photo + b2 * climate + b3 * human
+  prob <- (exp(equation)) / (1 + exp(equation))
+  print(prob)
+}
+
+# find plants not on red list with the lowest photosynthetic rates
+lpr_pred_low <- anti_join(lpr_summary, redlist) %>%
+  arrange(desc(avg_photo)) %>%
+  tail(5)
+
+lpr_pred <- anti_join(lpr_summary, redlist) %>%
+  arrange(desc(avg_photo)) %>%
+  head(5) %>%
+  rbind(lpr_pred_low)
+
+# binary climate and human values come from literature search
+pred_cols <- data.frame(climate_threatened = c(0,0,1,1,0,1,0,1,1,0),
+                        human_threatened = c(0,0,0,0,1,0,0,1,0,0)) 
+
+lpr_pred <- cbind(lpr_pred, pred_cols)
+
+for (i in seq_along(lpr_pred$scientific_name)) {
+  lpr_pred$y_hat[i] <- threat_prob(b0, b1, b2, b3, 
+                                       lpr_pred$avg_photo[i],
+                                       lpr_pred$climate_threatened[i],
+                                       lpr_pred$human_threatened[i])
+}
+```
+
+```{r echo=FALSE}
+lpr_pred %>% 
+  arrange(desc(avg_photo)) %>%
+  kbl(linesep = "", booktabs = TRUE, col.names = c("Speices", "Photosynthetic Rate", "Climate", "Human", "ˆy")) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"),
+                latex_options = c("striped", "hold_position"), full_width = TRUE)
+```
+
+
+
+
+
