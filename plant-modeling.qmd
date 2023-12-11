@@ -61,6 +61,7 @@ ggplot(join, aes(x = avg_photo)) +
 ggplot(data = join, aes(x = avg_photo, y = pop_trend)) + 
   geom_jitter(width = 0, height = 0.05, alpha = 0.8) +
   theme_linedraw() +
+  scale_y_discrete(limits = c("Stable_Inc", "Decreasing")) +
   labs(x = "Avg. Photosynthetic Rate per Leaf Area (Âµmol m-2 s-1)", 
        y = "Population Trend")
 ```

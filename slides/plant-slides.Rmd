@@ -76,7 +76,7 @@ clim_human_res <- left_join(climate_join, human_res) %>%
 
 # Background
 
-### Plants are threatened by many factors**
+#### Plants are threatened by many factors
 
 - Climate change
 - Habit loss
@@ -84,36 +84,37 @@ clim_human_res <- left_join(climate_join, human_res) %>%
 - Natural Disasters
 
 --
-### Factors that make certain species more resiliant
-- Traits (high range tolerance)
-- Associations with symbiotic fungi
-- Enhanced/ efficient metabolic processes
+
+#### Factors that make certain species more resiliant
+
+- Physiological traits/ Efficient metabolic processes
+- Associations with symbiotic oganisms
 
 --
-### Endangered and Threatened Species
 
-- number of plants listed as endangered
-- number with decreasing population as listed by IUCN
+#### Endangered and Threatened Species
 
+- 764 plant species protected under the Endangered Species Act
+- 18,291 listed as having a decreasing population by The International Union for Conservation of Nature (IUCN)
 
 ---
 # Question:
 
-## Can we predict is a plant species will have a decreasing based on its photosynthetic rate and if it is threatened by climate change or human activity?
+## Can we predict if a plant species will have a decreasing population trend based on its photosynthetic rate and if it is threatened by climate change or human activity?
 
 ---
 
 # Analysis Plan
 
-- Logistic Regression
+### Logistic Regression
 
 ##### $$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate) + \beta_2  (Climate) + \beta_3  (Human) +\varepsilon $$
 
-- Odds Ratio
+### Odds Ratio
 
-##### $$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot x\right)$$
+##### $$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot Photosynthetic Rate\right)$$
 
-- Make Predictions ?
+### Make Predictions ?
 
 ```{r}
 threat_prob <- function(b0, b1, b2, b3, photo, climate, human) {
@@ -129,23 +130,30 @@ threat_prob <- function(b0, b1, b2, b3, photo, climate, human) {
 ### Photosynthetic Rate
 - `BIEN` package in R
   - Botanical Information and Ecology Network (BIEN) was developed by collaborating ecologists at the National Center for Ecological Analysis and Synthesis (NCEAS)
-- Population Trend and Threats
+
+### Population Trend and Threats
   - IUCN Red List
+    - Kingdom *Plantae*
+  - Used search filters to select species threatened by climate or human activity  
   
 ---
-# First looks
-
-```{r echo=FALSE, fig.height=6}
+# Plotting the Data
+<small>
+```{r echo=FALSE, fig.height=5, dpi=500}
 ggplot(data = join, aes(x = avg_photo, y = pop_trend)) + 
   geom_jitter(width = 0, height = 0.05, alpha = 0.8) +
   theme_linedraw() +
+  scale_y_discrete(limits = c("Stable_Inc", "Decreasing")) +
   labs(x = "Avg. Photosynthetic Rate per Leaf Area (Âµmol m-2 s-1)", 
        y = "Population Trend")
 ```
-
+<small>
 ---
 # Logistic Regression
-```{r echo=FALSE, fig.height=6}
+
+<small>$$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate) + \varepsilon$$<small>
+<small>
+```{r echo=FALSE, fig.height=4, dpi=500}
 # binary resp glm plot
 ggplot(join, aes(x = avg_photo, y = pop_trend_binary)) + 
   geom_jitter(width = 0, height = 0.05, alpha = 0.8) +
@@ -155,14 +163,18 @@ ggplot(join, aes(x = avg_photo, y = pop_trend_binary)) +
   labs(x = "Avg. Photosynthetic Rate per Leaf Area (Âµmol m-2 s-1)", 
        y = "Has Decreasing Population Trend")
 ```
+<small>
 ---
 # Logistic Regression
-```{r echo=FALSE}
+
+```{r echo=TRUE}
 # model
 mod_photo <- glm(pop_trend_binary ~ avg_photo, 
                   data = join, 
                   family = "binomial") # binomial dist; prob of 1 and 0 over many trials
+```
 
+```{r echo=FALSE}
 # model table
 sjPlot::tab_model(mod_photo,
           transform = NULL,
@@ -183,18 +195,35 @@ $$\operatorname{logit}(\hat p)=\log \left(\frac{\hat p}{1-\hat p}\right)=-0.464-
 # Odds Ratio
 
 By how much does the model predict that the odds of having a decreasing population will change with each additional unit in photosynthetic rate?
---
-$$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot x\right)$$
---
+
+$$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot Photosynthetic Rate\right)$$
+---
+# Odds Ratio
+<small>
+```{r echo=FALSE, fig.height=2}
+tab_model(mod_photo,
+          transform = NULL,
+          pred.labels = c("Intercept", "Average Photosyntheitc Rate (Âµmol m-2 s-1)"),
+          p.style = c("numeric_stars"),
+          p.threshold = c(0.10, 0.05, 0.01),
+          show.p = TRUE,
+          string.p = "p-value",
+          dv.labels = c("log Threat Pobability"),
+          show.r2 = FALSE,
+          title = "Logisitc Regression Model Results for Photosynthetic Rate",
+          digits = 3)
+```
+<small>
 ```{r}
 exp(mod_photo$coefficients[2])
 ```
 --
-The model estimates that one additional unit in photosynthetic rate is associated with a change in the odds ratio of $e^{-0.089} = 0.915$, or a 8.9% decrease in the odds of having a decreasing population.
+#### The model estimates that one additional unit in photosynthetic rate is associated with a change in the odds ratio of $e^{-0.089} = 0.915$ or a 8.9% decrease in the odds of having a decreasing population.
 
 ---
 # Odds Ratio
-```{r echo=FALSE}
+
+```{r echo=FALSE, dpi=500, fig.height=5}
 # compute odds hat var
 photo_fitted <- mod_photo %>%
   augment(type.predict = "response") %>%
@@ -216,19 +245,15 @@ ggplot(photo_fitted, aes(x = avg_photo, y = odds_hat)) +
 
 --
 
-```{r}
+```{r echo=FALSE}
 mod <- glm(pop_trend_binary ~ avg_photo + climate_threatened + human_threatened,
            data = clim_human_res,
            family = "binomial")
 
 exp(coef(mod))
 
-mod$coefficients[2]
 ```
-
----
-# Logistic Model
-
+--
 ```{r echo=FALSE}
 tab_model(mod,
           transform = NULL,
@@ -244,70 +269,34 @@ tab_model(mod,
           digits = 3)
 ```
 
---
+---
+# Logistic Model
+
 Based on this model:
 
-- Plants threatened by climate factors have their odds of having a decreasing population increase by a factor of 4.29
-- Plants threatened by human factors have their odds increase by a factor of 2.52
+- Plants threatened by climate factors have their odds of having a decreasing population increase by a factor of 4.29.
+- Plants threatened by human factors have their odds increase by a factor of 2.52.
 - The odds of having a decreasing population trend fall by about 10% for each unit increase in photosynthetic rate.
 
 ---
-# Making Probalistic Predictions
+# Limitations and Next Steps
+
+- IUCN and BIEN do not have all plant species and the sample here might not be representative
+- Many species on the IUCN database have an unknown population trend status
+- Apply model to species with an unknown population status
 
 ```{r}
 threat_prob <- function(b0, b1, b2, b3, photo, climate, human) {
   equation <- b0 + b1 * photo + b2 * climate + b3 * human
   prob <- (exp(equation)) / (1 + exp(equation))
-  print(prob)}
-```
-
-```{r echo=FALSE, results='hide', warning=FALSE, message=FALSE}
-# coefficients
-b0 <- mod$coefficients[1] #Intercept
-b1 <- mod$coefficients[2] #photo
-b2 <- mod$coefficients[3] #climate
-b3 <- mod$coefficients[4] #human
-
-# Function for testing probabilities
-threat_prob <- function(b0, b1, b2, b3, photo, climate, human) {
-  equation <- b0 + b1 * photo + b2 * climate + b3 * human
-  prob <- (exp(equation)) / (1 + exp(equation))
   print(prob)
 }
-
-# find plants not on red list with the lowest photosynthetic rates
-lpr_pred_low <- anti_join(lpr_summary, redlist) %>%
-  arrange(desc(avg_photo)) %>%
-  tail(5)
-
-lpr_pred <- anti_join(lpr_summary, redlist) %>%
-  arrange(desc(avg_photo)) %>%
-  head(5) %>%
-  rbind(lpr_pred_low)
-
-# binary climate and human values come from literature search
-pred_cols <- data.frame(climate_threatened = c(0,0,1,1,0,1,0,1,1,0),
-                        human_threatened = c(0,0,0,0,1,0,0,1,0,0)) 
-
-lpr_pred <- cbind(lpr_pred, pred_cols)
-
-for (i in seq_along(lpr_pred$scientific_name)) {
-  lpr_pred$y_hat[i] <- threat_prob(b0, b1, b2, b3, 
-                                       lpr_pred$avg_photo[i],
-                                       lpr_pred$climate_threatened[i],
-                                       lpr_pred$human_threatened[i])
-}
 ```
 
-```{r echo=FALSE}
-lpr_pred %>% 
-  arrange(desc(avg_photo)) %>%
-  kbl(linesep = "", booktabs = TRUE, col.names = c("Speices", "Photosynthetic Rate", "Climate", "Human", "ˆy")) %>%
-  kable_styling(bootstrap_options = c("striped", "condensed"),
-                latex_options = c("striped", "hold_position"), full_width = TRUE)
-```
+---
+# Thank you!
 
-
+![](plant-pic.png)
 
 
 

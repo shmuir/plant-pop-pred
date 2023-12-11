@@ -9,8 +9,6 @@
     <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
     <link href="libs/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
     <link href="libs/remark-css-0.0.1/metropolis-fonts.css" rel="stylesheet" />
-    <script src="libs/kePrint-0.0.1/kePrint.js"></script>
-    <link href="libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
     <link rel="stylesheet" href="my-css.css" type="text/css" />
   </head>
   <body>
@@ -37,36 +35,45 @@ class: center, middle, inverse, title-slide
 
 # Background
 
-**plants threatened by many factors**
+#### Plants are threatened by many factors
 
-- number of plants listed as endangered
-- number with decreasing population as listed by IUCN
+- Climate change
+- Habit loss
+- Human disturbance
+- Natural Disasters
 
-**big contributing factors**
+--
 
-- energy efficiency
-  - C3, C4, &amp; CAM plants
-- Climate change threats
-- Human threats
+#### Factors that make certain species more resiliant
+
+- Physiological traits/ Efficient metabolic processes
+- Associations with symbiotic oganisms
+
+--
+
+#### Endangered and Threatened Species
+
+- 764 plant species protected under the Endangered Species Act
+- 18,291 listed as having a decreasing population by The International Union for Conservation of Nature (IUCN)
 
 ---
 # Question:
 
-## Can we predict is a plant species will have a decreasing based on its photosynthetic rate and if it is threatened by climate change or human activity?
+## Can we predict if a plant species will have a decreasing population trend based on its photosynthetic rate and if it is threatened by climate change or human activity?
 
 ---
 
 # Analysis Plan
 
-- Logistic Regression
+### Logistic Regression
 
 ##### $$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate) + \beta_2  (Climate) + \beta_3  (Human) +\varepsilon $$
 
-- Odds Ratio
+### Odds Ratio
 
-##### `$$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot x\right)$$`
+##### `$$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot Photosynthetic Rate\right)$$`
 
-- Make Predictions ?
+### Make Predictions ?
 
 
 ```r
@@ -83,24 +90,40 @@ threat_prob &lt;- function(b0, b1, b2, b3, photo, climate, human) {
 ### Photosynthetic Rate
 - `BIEN` package in R
   - Botanical Information and Ecology Network (BIEN) was developed by collaborating ecologists at the National Center for Ecological Analysis and Synthesis (NCEAS)
-- Population Trend and Threats
+
+### Population Trend and Threats
   - IUCN Red List
+    - Kingdom *Plantae*
+  - Used search filters to select species threatened by climate or human activity  
   
 ---
-# First looks
-
+# Plotting the Data
+&lt;small&gt;
 ![](plant-slides_files/figure-html/unnamed-chunk-2-1.png)&lt;!-- --&gt;
-
+&lt;small&gt;
 ---
 # Logistic Regression
+
+&lt;small&gt;$$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate) + \varepsilon$$&lt;small&gt;
+&lt;small&gt;
 
 ```
 ## `geom_smooth()` using formula = 'y ~ x'
 ```
 
 ![](plant-slides_files/figure-html/unnamed-chunk-3-1.png)&lt;!-- --&gt;
+&lt;small&gt;
 ---
 # Logistic Regression
+
+
+```r
+# model
+mod_photo &lt;- glm(pop_trend_binary ~ avg_photo, 
+                  data = join, 
+                  family = "binomial") # binomial dist; prob of 1 and 0 over many trials
+```
+
 &lt;table style="border-collapse:collapse; border:none;"&gt;
 &lt;caption style="font-weight: bold; text-align:left;"&gt;Logisitc Regression Model Results for Photosynthetic Rate&lt;/caption&gt;
 &lt;tr&gt;
@@ -141,9 +164,45 @@ threat_prob &lt;- function(b0, b1, b2, b3, photo, climate, human) {
 # Odds Ratio
 
 By how much does the model predict that the odds of having a decreasing population will change with each additional unit in photosynthetic rate?
---
-`$$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot x\right)$$`
---
+
+`$$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot Photosynthetic Rate\right)$$`
+---
+# Odds Ratio
+&lt;small&gt;
+&lt;table style="border-collapse:collapse; border:none;"&gt;
+&lt;caption style="font-weight: bold; text-align:left;"&gt;Logisitc Regression Model Results for Photosynthetic Rate&lt;/caption&gt;
+&lt;tr&gt;
+&lt;th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; "&gt;&amp;nbsp;&lt;/th&gt;
+&lt;th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; "&gt;log Threat Pobability&lt;/th&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; "&gt;Predictors&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  "&gt;Log-Odds&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  "&gt;CI&lt;/td&gt;
+&lt;td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  "&gt;p-value&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; "&gt;Intercept&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&amp;#45;0.464 &lt;sup&gt;**&lt;/sup&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&amp;#45;0.907&amp;nbsp;&amp;ndash;&amp;nbsp;-0.016&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;strong&gt;0.041&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; "&gt;Average Photosyntheitc Rate (Âµmol m-2 s-1)&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&amp;#45;0.089 &lt;sup&gt;***&lt;/sup&gt;&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&amp;#45;0.133&amp;nbsp;&amp;ndash;&amp;nbsp;-0.048&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "&gt;&lt;strong&gt;&amp;lt;0.001&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;"&gt;Observations&lt;/td&gt;
+&lt;td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3"&gt;609&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td colspan="4" style="font-style:italic; border-top:double black; text-align:right;"&gt;* p&amp;lt;0.1&amp;nbsp;&amp;nbsp;&amp;nbsp;** p&amp;lt;0.05&amp;nbsp;&amp;nbsp;&amp;nbsp;*** p&amp;lt;0.01&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;/table&gt;
+&lt;small&gt;
 
 ```r
 exp(mod_photo$coefficients[2])
@@ -154,27 +213,19 @@ exp(mod_photo$coefficients[2])
 ## 0.9146572
 ```
 --
-The model estimates that one additional unit in photosynthetic rate is associated with a change in the odds ratio of `\(e^{-0.089} = 0.915\)`, or a 8.9% decrease in the odds of having a decreasing population.
+#### The model estimates that one additional unit in photosynthetic rate is associated with a change in the odds ratio of `\(e^{-0.089} = 0.915\)` or a 8.9% decrease in the odds of having a decreasing population.
 
 ---
 # Odds Ratio
-![](plant-slides_files/figure-html/unnamed-chunk-6-1.png)&lt;!-- --&gt;
+
+![](plant-slides_files/figure-html/unnamed-chunk-8-1.png)&lt;!-- --&gt;
 ---
 # Logistic Model
 
 &lt;small&gt;$$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate) + \beta_2  (Climate) + \beta_3  (Human) +\varepsilon$$&lt;small&gt;
 
----
-# Logistic Model
+--
 
-
-```r
-mod &lt;- glm(pop_trend_binary ~ avg_photo + climate_threatened + human_threatened,
-           data = clim_human_res,
-           family = "binomial")
-
-exp(coef(mod))
-```
 
 ```
 ##           (Intercept)             avg_photo climate_threatenedyes 
@@ -182,19 +233,7 @@ exp(coef(mod))
 ##   human_threatenedyes 
 ##             2.5251016
 ```
-
-```r
-mod$coefficients[2]
-```
-
-```
-##  avg_photo 
-## -0.1098942
-```
-
----
-# Logistic Model
-
+--
 &lt;table style="border-collapse:collapse; border:none;"&gt;
 &lt;caption style="font-weight: bold; text-align:left;"&gt;Logisitc Regression Model Results for Photosynthetic Rate, Climate Threatened, and Human Threatened&lt;/caption&gt;
 &lt;tr&gt;
@@ -241,107 +280,35 @@ mod$coefficients[2]
 
 &lt;/table&gt;
 
---
-From this model we can conclude that plants threatened by climate factors have their odds of having a decreasing population increase by a factor of 4.29, while those threatened by human factors have their odds increase by a factor of 2.52. We can also see that photosynthetic rate does still have an effect on population trend. Based on this model, the odds of having a decreasing population trend fall by about 10% for each unit increase in photosynthetic rate.
+---
+# Logistic Model
+
+Based on this model:
+
+- Plants threatened by climate factors have their odds of having a decreasing population increase by a factor of 4.29.
+- Plants threatened by human factors have their odds increase by a factor of 2.52.
+- The odds of having a decreasing population trend fall by about 10% for each unit increase in photosynthetic rate.
 
 ---
-# Making Probalistic Predictions
+# Limitations and Next Steps
+
+- IUCN and BIEN do not have all plant species and the sample here might not be representative
+- Many species on the IUCN database have an unknown population trend status
+- Apply model to species with an unknown population status
 
 
 ```r
 threat_prob &lt;- function(b0, b1, b2, b3, photo, climate, human) {
   equation &lt;- b0 + b1 * photo + b2 * climate + b3 * human
   prob &lt;- (exp(equation)) / (1 + exp(equation))
-  print(prob)}
+  print(prob)
+}
 ```
 
+---
+# Thank you!
 
-
-&lt;table class="table table-striped table-condensed" style="margin-left: auto; margin-right: auto;"&gt;
- &lt;thead&gt;
-  &lt;tr&gt;
-   &lt;th style="text-align:left;"&gt; Speices &lt;/th&gt;
-   &lt;th style="text-align:right;"&gt; Photosynthetic Rate &lt;/th&gt;
-   &lt;th style="text-align:right;"&gt; Climate &lt;/th&gt;
-   &lt;th style="text-align:right;"&gt; Human &lt;/th&gt;
-   &lt;th style="text-align:right;"&gt; ˆy &lt;/th&gt;
-  &lt;/tr&gt;
- &lt;/thead&gt;
-&lt;tbody&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; Psammochloa villosa &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 65.05000 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.0004961 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; Helianthus neglectus &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 48.72300 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.0029764 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; Helianthus niveus &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 46.74867 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 1 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.0156898 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; Glaux maritima &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 43.00000 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 1 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.0235000 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; Helianthus cusickii &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 42.24100 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 1 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.0151357 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; Gouania lupuloides &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.70820 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 1 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.7151743 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; Serjania mexicana &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.68560 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.3693444 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; Clematis florida &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.61000 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 1 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 1 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.8650312 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; Passiflora vitifolia &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.51340 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 1 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.7195148 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; Cissus erosa &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.43180 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 0.3758644 &lt;/td&gt;
-  &lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
-
+![](plant-pic.png)
 
 
 
