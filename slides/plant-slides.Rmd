@@ -1,6 +1,5 @@
 ---
-title: "Predicting plant population trend from photosynthetic rate"
-subtitle: "EDS222"
+title: "A Statistical Analysis of Photosynthetic Efficiency and Ecological Threats in Predicting Plant Population Trends"
 author: "Sam Muir"
 date: "December 12, 2023"
 output:
@@ -9,8 +8,20 @@ output:
     nature:
       highlightStyle: github
       countIncrementalSlides: false
-    css: ['default', 'metropolis', 'metropolis-fonts', 'my-css.css']
+    css: ['default', 'metropolis', 'metropolis-fonts', 'xaringan-themer.css']
 ---
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+style_xaringan(header_background_text_color = "#FDFBF7",
+               title_slide_background_color = "#555e55",
+               title_slide_text_color = "#FDFBF7", 
+               header_background_auto = TRUE,
+               header_background_color = "#555e55",
+               base_font_size = 20,
+               header_color = "#555e55",
+               header_background_content_padding_top = "3rem")
+```
 
 ```{r setup, include=FALSE}
 library(tidyverse)
@@ -38,7 +49,7 @@ lpr_summary <- lpr %>%
   summarise(avg_photo = mean(trait_value, na.rm = TRUE))
 
 ## read in redlist data ##
-redlist <- read_csv(here("data", "redlist_species_data/assessments.csv")) %>%
+redlist <- read_csv(here("projects", "2023-12-15-plant-population-prediction", "data", "redlist_species_data/assessments.csv")) %>%
   clean_names() %>%
   filter(population_trend %in% c("Stable", "Increasing", "Decreasing")) %>% # remove data deficient observations
   # create new pop trend groupings
@@ -56,12 +67,12 @@ join <- inner_join(lpr_summary, redlist)
 
 ## threat data ##
 # climate threatened speices
-climate_threatened <- read_csv(here("data", "IUCN_climate_threatened.csv")) %>%
+climate_threatened <- read_csv(here("projects", "2023-12-15-plant-population-prediction", "data", "IUCN_climate_threatened.csv")) %>%
   mutate(climate_threatened = "yes")
 
 # human threatened species
 # this includes both "human intrusions & disturbance" and "residential & commercial development" catagories from IUCN
-human_res <- read_csv(here("data","IUCN_human_res.csv")) %>%
+human_res <- read_csv(here("projects", "2023-12-15-plant-population-prediction", "data","IUCN_human_res.csv")) %>%
   mutate(human_threatened = "yes")
 
 ## threat joins ##
@@ -76,7 +87,7 @@ clim_human_res <- left_join(climate_join, human_res) %>%
 
 # Background
 
-#### Plants are threatened by many factors
+### Plants are threatened by many factors
 
 - Climate change
 - Habit loss
@@ -85,14 +96,14 @@ clim_human_res <- left_join(climate_join, human_res) %>%
 
 --
 
-#### Factors that make certain species more resiliant
+### Factors that make certain species more resiliant
 
 - Physiological traits/ Efficient metabolic processes
-- Associations with symbiotic oganisms
+- Associations with symbiotic organisms
 
 --
 
-#### Endangered and Threatened Species
+### Endangered and Threatened Species
 
 - 764 plant species protected under the Endangered Species Act
 - 18,291 listed as having a decreasing population by The International Union for Conservation of Nature (IUCN)
@@ -114,7 +125,7 @@ clim_human_res <- left_join(climate_join, human_res) %>%
 
 ##### $$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot Photosynthetic Rate\right)$$
 
-### Make Predictions ?
+### Make Predictions?
 
 ```{r}
 threat_prob <- function(b0, b1, b2, b3, photo, climate, human) {
@@ -139,7 +150,7 @@ threat_prob <- function(b0, b1, b2, b3, photo, climate, human) {
 ---
 # Plotting the Data
 <small>
-```{r echo=FALSE, fig.height=5, dpi=500}
+```{r echo=FALSE, fig.height=4.5, dpi=500}
 ggplot(data = join, aes(x = avg_photo, y = pop_trend)) + 
   geom_jitter(width = 0, height = 0.05, alpha = 0.8) +
   theme_linedraw() +
@@ -148,11 +159,12 @@ ggplot(data = join, aes(x = avg_photo, y = pop_trend)) +
        y = "Population Trend")
 ```
 <small>
+
 ---
 # Logistic Regression
 
 <small>$$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate) + \varepsilon$$<small>
-<small>
+
 ```{r echo=FALSE, fig.height=4, dpi=500}
 # binary resp glm plot
 ggplot(join, aes(x = avg_photo, y = pop_trend_binary)) + 
@@ -163,15 +175,14 @@ ggplot(join, aes(x = avg_photo, y = pop_trend_binary)) +
   labs(x = "Avg. Photosynthetic Rate per Leaf Area (Âµmol m-2 s-1)", 
        y = "Has Decreasing Population Trend")
 ```
-<small>
+
 ---
 # Logistic Regression
-
 ```{r echo=TRUE}
 # model
 mod_photo <- glm(pop_trend_binary ~ avg_photo, 
                   data = join, 
-                  family = "binomial") # binomial dist; prob of 1 and 0 over many trials
+                  family = "binomial")
 ```
 
 ```{r echo=FALSE}
@@ -194,12 +205,15 @@ $$\operatorname{logit}(\hat p)=\log \left(\frac{\hat p}{1-\hat p}\right)=-0.464-
 ---
 # Odds Ratio
 
-By how much does the model predict that the odds of having a decreasing population will change with each additional unit in photosynthetic rate?
+### By how much does the model predict that the odds of having a decreasing population will change with each additional unit in photosynthetic rate?
+<br>
 
 $$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot Photosynthetic Rate\right)$$
 ---
 # Odds Ratio
-<small>
+
+$$\operatorname{odds}(\hat{p})=\frac{\hat{p}}{1-\hat{p}}=\exp \left(\hat{\beta}_0+\hat{\beta}_1 \cdot Photosynthetic Rate\right)$$
+
 ```{r echo=FALSE, fig.height=2}
 tab_model(mod_photo,
           transform = NULL,
@@ -213,17 +227,17 @@ tab_model(mod_photo,
           title = "Logisitc Regression Model Results for Photosynthetic Rate",
           digits = 3)
 ```
-<small>
+
 ```{r}
 exp(mod_photo$coefficients[2])
 ```
 --
-#### The model estimates that one additional unit in photosynthetic rate is associated with a change in the odds ratio of $e^{-0.089} = 0.915$ or a 8.9% decrease in the odds of having a decreasing population.
+The model estimates that one additional unit in photosynthetic rate is associated with a change in the odds ratio of $e^{-0.089} = 0.915$ or a 8.9% decrease in the odds of having a decreasing population.
 
 ---
 # Odds Ratio
 
-```{r echo=FALSE, dpi=500, fig.height=5}
+```{r echo=FALSE, dpi=500, fig.height=4.5}
 # compute odds hat var
 photo_fitted <- mod_photo %>%
   augment(type.predict = "response") %>%
@@ -241,7 +255,7 @@ ggplot(photo_fitted, aes(x = avg_photo, y = odds_hat)) +
 ---
 # Logistic Model
 
-<small>$$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate) + \beta_2  (Climate) + \beta_3  (Human) +\varepsilon$$<small>
+$$\operatorname{logit}(p)=\log \left(\frac{p}{1-p}\right)=\beta_0+\beta_1  (Photosynthetic Rate) + \beta_2  (Climate) + \beta_3  (Human) +\varepsilon$$
 
 --
 
@@ -249,10 +263,12 @@ ggplot(photo_fitted, aes(x = avg_photo, y = odds_hat)) +
 mod <- glm(pop_trend_binary ~ avg_photo + climate_threatened + human_threatened,
            data = clim_human_res,
            family = "binomial")
-
-exp(coef(mod))
-
 ```
+
+```{r}
+exp(coef(mod))
+```
+
 --
 ```{r echo=FALSE}
 tab_model(mod,
@@ -272,18 +288,20 @@ tab_model(mod,
 ---
 # Logistic Model
 
-Based on this model:
+## **Based on this model:**
 
-- Plants threatened by climate factors have their odds of having a decreasing population increase by a factor of 4.29.
-- Plants threatened by human factors have their odds increase by a factor of 2.52.
-- The odds of having a decreasing population trend fall by about 10% for each unit increase in photosynthetic rate.
+### - Plants threatened by climate factors have their odds of having a decreasing population increase by a factor of 4.29.
+### - Plants threatened by human factors have their odds increase by a factor of 2.52.
+### - The odds of having a decreasing population trend fall by about 10% for each unit increase in photosynthetic rate.
 
 ---
 # Limitations and Next Steps
 
-- IUCN and BIEN do not have all plant species and the sample here might not be representative
-- Many species on the IUCN database have an unknown population trend status
-- Apply model to species with an unknown population status
+### - IUCN and BIEN do not have all plant species and the sample here might not be representative
+### - Many species on the IUCN database have an unknown population trend status
+### - Apply model to species with an unknown population status
+
+<br>
 
 ```{r}
 threat_prob <- function(b0, b1, b2, b3, photo, climate, human) {
@@ -297,6 +315,3 @@ threat_prob <- function(b0, b1, b2, b3, photo, climate, human) {
 # Thank you!
 
 ![](plant-pic.png)
-
-
-
