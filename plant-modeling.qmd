@@ -186,6 +186,49 @@ tab_model(mod,
 
 From this model we can conclude that plants threatened by climate factors have their odds of having a decreasing population increase by a factor of 4.29, while those threatened by human factors have their odds increase by a factor of 2.52. We can also see that photosynthetic rate does still have an effect on population trend. Based on this model, the odds of having a decreasing population trend fall by about 10% for each unit increase in photosynthetic rate.
 
+# Assessing Model Performance
+
+```{r}
+photo_plus <- augment(mod, type.predict = "response") %>%
+  mutate(y_hat = round(.fitted)) %>%
+  select(pop_trend_binary, avg_photo, .fitted, y_hat)
+con_matrix <- photo_plus %>%
+  select(pop_trend_binary, y_hat) %>%
+  table()
+rownames <- c("Actually has Non-Decreasing Pop.", "Actually has Decreasing Pop.")
+colnames <- c("Predicted Non-Decreasing Pop.", "Predicted Decreasing Pop.")
+con_matrix <- as.data.frame(matrix(c(con_matrix[1], 
+                                       con_matrix[2], 
+                                       con_matrix[3], 
+                                       con_matrix[4]), 
+                                     ncol = 2, 
+                                     nrow = 2),
+                              row.names = rownames)
+colnames(con_matrix) <- colnames
+
+where <- rbind(c(2,1), c(2,2), c(1,1), c(1,2))
+style <- c('color: red;',
+           'color: green;',
+           'color: green;',
+           'color: red;')
+
+css.cell <- matrix('', nrow(con_matrix), ncol(con_matrix))
+css.cell[where] <- style
+
+htmlTable::htmlTable(con_matrix, css.cell = css.cell,
+                     caption = "Confusion Matrix to assess Photosynthetic Rate Model Performance")
+```
+
+```{r}
+(477+12)/nrow(photo_plus) # percent correct total
+
+12/20 # percent correct decreasing
+
+477/589 # percent correct non-decreasing
+```
+
+Confusion Matrix to assess how the model performs vs actual counts. Green is True Positive/True Negative and red is False Positive/False Negative.
+
 # Making Probalistic Predictions
 
 There are many species from the BIEN data that are not present on the IUCN Red List. Here, I am using my model to make out-of-sample predictions. To do this, I'll need to pull of the model coefficients and create a function with inputs for the coefficients, photosynthetic rate, if it is threatened by climate change, and if it is threatened by human activities.
@@ -252,9 +295,3 @@ lpr_pred %>%
   kable_styling(bootstrap_options = c("striped", "condensed"),
                 latex_options = c("striped", "hold_position"), full_width = TRUE)
 ```
-
-# Thoughts and Conclusions
-
--   do these results support your hypothesis, why or why not
--   discuss uncertainty (std error)
--   discuss limitations
